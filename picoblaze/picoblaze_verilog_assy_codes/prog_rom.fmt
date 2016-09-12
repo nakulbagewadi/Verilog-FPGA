@@ -1,0 +1,78 @@
+                 ;#######################################################
+                 ; sum16
+                 ;#######################################################
+                 ; #define statements
+                 CONSTANT INPUTPORT_LSB, 00            ; port_id = 0, read sw7-sw0
+                 CONSTANT INPUTPORT_MSB, 01            ; port_id = 1, read sw15-sw8
+                 CONSTANT OUTPUTPORT_BYTE0, 02         ; port_id = 2, when putting 8-bit LSB on out_port
+                 CONSTANT OUTPUTPORT_BYTE1, 03         ; port_id = 3, when putting 8-bit on out_port
+                 CONSTANT OUTPUTPORT_BYTE2, 04         ; port_id = 4, when putting 8-bit on out_port
+                 CONSTANT OUTPUTPORT_BYTE3, 05         ; port_id = 5, when putting 8-bit MSB on out_port
+                 ; register alias
+                 NAMEREG s0, indata_lsb                ; read from input port sw7 - sw0
+                 NAMEREG s1, indata_msb                ; read from input port sw15 - sw8
+                 NAMEREG s2, scratch_lsb               ; lsb scratchpad
+                 NAMEREG s3, scratch_msb               ; msb scratchpad
+                 NAMEREG s4, answer_byte0              ; byte 0 of answer
+                 NAMEREG s5, answer_byte1              ; byte 1 of answer
+                 NAMEREG s6, answer_byte2              ; byte 2 of answer
+                 NAMEREG s7, answer_byte3              ; byte 3 of answer
+                 ;#######################################################
+                 ; Main Program
+                 ;#######################################################
+           loop: 
+                 CALL read_switch
+                 CALL compute_sum
+                 CALL display
+                 JUMP loop
+    read_switch: 
+                 INPUT indata_lsb, INPUTPORT_LSB
+                 INPUT indata_msb, INPUTPORT_MSB
+                 RETURN 
+        display: 
+                 OUTPUT answer_byte0, OUTPUTPORT_BYTE0
+                 OUTPUT answer_byte1, OUTPUTPORT_BYTE1
+                 OUTPUT answer_byte2, OUTPUTPORT_BYTE2
+                 OUTPUT answer_byte3, OUTPUTPORT_BYTE3
+                 RETURN 
+    compute_sum: 
+                 LOAD scratch_lsb, indata_lsb
+                 LOAD scratch_msb, indata_msb
+                 LOAD answer_byte0, indata_lsb
+                 LOAD answer_byte1, 00
+                 LOAD answer_byte2, 00
+                 LOAD answer_byte3, 00
+                 COMPARE indata_msb, 00
+                 JUMP NZ, check_if_1
+                 COMPARE indata_lsb, 00
+                 JUMP NZ, check_if_1
+                 RETURN 
+     check_if_1: 
+                 COMPARE indata_msb, 00
+                 JUMP NZ, begin_computing
+                 COMPARE indata_lsb, 01
+                 JUMP NZ, begin_computing
+                 RETURN 
+begin_computing: 
+                 LOAD answer_byte0, 00
+                 LOAD answer_byte1, 00
+                 LOAD answer_byte2, 00
+                 LOAD answer_byte3, 00
+      add_until: 
+                 ADD answer_byte0, scratch_lsb
+                 ADDCY answer_byte1, scratch_msb
+                 JUMP NC, dec_scratch_reg
+                 ADDCY answer_byte2, 00
+                 JUMP NC, dec_scratch_reg
+                 ADDCY answer_byte3, 00
+dec_scratch_reg: ; ////////////// check for 02_01 and 01_01 and 00_01
+                 COMPARE scratch_lsb, 00
+                 JUMP NZ, PPPP
+                 COMPARE scratch_msb, 00
+                 JUMP NZ, NNNN
+                 RETURN                                ; scratch_lsb & scratch_msb are both 0, computation is over!
+           NNNN: 
+                 SUB scratch_msb, 01
+           PPPP: 
+                 SUB scratch_lsb, 01
+                 JUMP add_until

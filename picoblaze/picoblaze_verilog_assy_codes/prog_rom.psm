@@ -1,0 +1,89 @@
+;#######################################################
+; sum16
+;#######################################################
+; #define statements
+constant INPUTPORT_LSB,  00		; port_id = 0, read sw7-sw0
+constant INPUTPORT_MSB,  01		; port_id = 1, read sw15-sw8	
+constant OUTPUTPORT_BYTE0, 02		; port_id = 2, when putting 8-bit LSB on out_port	
+constant OUTPUTPORT_BYTE1, 03		; port_id = 3, when putting 8-bit on out_port
+constant OUTPUTPORT_BYTE2, 04		; port_id = 4, when putting 8-bit on out_port
+constant OUTPUTPORT_BYTE3, 05		; port_id = 5, when putting 8-bit MSB on out_port
+
+; register alias
+namereg s0, indata_lsb 			; read from input port sw7 - sw0
+namereg s1, indata_msb		 	; read from input port sw15 - sw8
+namereg s2, scratch_lsb			; lsb scratchpad
+namereg s3, scratch_msb			; msb scratchpad
+namereg s4, answer_byte0		; byte 0 of answer			
+namereg s5, answer_byte1		; byte 1 of answer
+namereg s6, answer_byte2		; byte 2 of answer
+namereg s7, answer_byte3		; byte 3 of answer
+
+;#######################################################
+; Main Program
+;#######################################################
+
+loop:
+call read_switch
+call compute_sum
+call display
+jump loop
+
+read_switch:
+input indata_lsb, INPUTPORT_LSB
+input indata_msb, INPUTPORT_MSB
+return
+
+display:
+output answer_byte0, OUTPUTPORT_BYTE0
+output answer_byte1, OUTPUTPORT_BYTE1
+output answer_byte2, OUTPUTPORT_BYTE2
+output answer_byte3, OUTPUTPORT_BYTE3
+return
+
+compute_sum:
+load scratch_lsb, indata_lsb
+load scratch_msb, indata_msb
+load answer_byte0, indata_lsb
+load answer_byte1, 00
+load answer_byte2, 00
+load answer_byte3, 00
+
+compare indata_msb, 00
+jump nz, check_if_1
+compare indata_lsb, 00
+jump nz, check_if_1
+return
+
+check_if_1:	
+compare indata_msb, 00
+jump nz, begin_computing
+compare indata_lsb, 01
+jump nz, begin_computing
+return
+
+begin_computing: 
+load answer_byte0, 00
+load answer_byte1, 00
+load answer_byte2, 00
+load answer_byte3, 00
+
+add_until:
+add answer_byte0, scratch_lsb
+addcy answer_byte1, scratch_msb
+jump nc, dec_scratch_reg
+addcy answer_byte2, 00
+jump nc, dec_scratch_reg
+addcy answer_byte3, 00
+
+dec_scratch_reg:
+compare scratch_lsb, 00
+jump nz, dec_scratch_lsb
+compare scratch_msb, 00
+jump nz, dec_scratch_msb
+return					; scratch_lsb & scratch_msb are both 0, computation is over!
+dec_scratch_msb:
+sub scratch_msb, 01
+dec_scratch_lsb:
+sub scratch_lsb, 01
+jump add_until

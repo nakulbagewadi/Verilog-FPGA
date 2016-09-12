@@ -1,0 +1,34 @@
+
+Explanation of the way sum16 module and assembly code works..
+
+We read the input from the 16 switches into the in_port of picoblaze, two chunks of 8-bits each.
+When we read the LSB, we output '00' on the port_id.
+When we read the MSB, we output '01' on the port_id.
+
+Firstly, we check if the input is '0' or '1'.
+If yes, then we output the input as answer and computataion is not required to be done.
+If input is any other number, we need to compute the sum of the first 'N' numbers, where
+'N' is the input from the switches.
+
+The way we compute is the following:
+We add all the numbers starting from the input, decrementing by 1 each time, until we reach 0.
+
+Since we have a 16-bit input for which we have to use two 8-bit registers, we need to be careful
+while decrementing.
+We check if 'scratch_lsb' is zero, if yes, then we check if 'scratch_msb' is zero, if yes then 
+our computation is complete!
+Otherwise if scratch_msb is not zero, we decrement the scratch_msb first  and then the 
+scratch_lsb and go on adding to the asnwer.
+
+In the fpga program we check the value output on the port_id to decide which input switches
+to read from or which output_reg to write to, since we have only one 8-bit out_port in picoblaze.
+
+Our answer will comprise of 32-bits max. or four 8-bit registers.
+
+When we output the byte_0 of answer, port_id is '02' 
+When we output the byte_1 of answer, port_id is '03' 
+When we output the byte_2 of answer, port_id is '04' 
+When we output the byte_3 of answer, port_id is '05' 
+
+To display the answer on the fpga board we use the same modules for displaying a digit on the 
+7-segment display, counter, decoder, etc.
